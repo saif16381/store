@@ -35,7 +35,7 @@ export async function registerRoutes(
     }),
     resave: false,
     saveUninitialized: false,
-    secret: process.env.SESSION_SECRET || 'keyboard cat'
+    secret: process.env.SESSION_SECRET || (() => { throw new Error("SESSION_SECRET environment variable is required"); })()
   }));
 
   app.post(api.auth.login.path, async (req, res) => {
