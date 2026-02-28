@@ -1,0 +1,187 @@
+PHASE 6A — SELLER ORDER MANAGEMENT
+Implement the Seller Order Management system under src/features/orders/ and integrate it into the existing Seller Dashboard:
+
+1. SELLER ORDERS PAGE (/dashboard/orders):
+   - This page is protected by SellerRoute (already built in Phase 1)
+   - Add "Orders" as a link in the existing Dashboard sidebar navigation (built in Phase 2)
+
+2. ORDERS TABLE:
+   - Fetch all orders from Firestore where the items array contains at least one item 
+     with a storeId matching the current seller's storeId
+   - Use TanStack Query (useQuery) for initial data fetching
+   - Display results in a shadcn/ui Table with the following columns:
+     Order ID (truncated to first 8 characters with copy-full-ID button)
+     Buyer Name (fetched from the order's shippingAddress.fullName)
+     Items Count (number of items in that order belonging to THIS seller's store only)
+     Seller Total (sum of price × quantity for only this seller's items, not the full order total)
+     Status (color-coded shadcn/ui Badge: pending=yellow, confirmed=blue, processing=orange, shipped=purple, delivered=green, cancelled=red)
+     Date (formatted createdAt timestamp, e.g., "Feb 28, 2026")
+     Actions column
+
+3. EXPANDABLE ORDER DETAILS:
+   - Clicking on a table row expands an inline detail panel (use shadcn/ui Collapsible or Accordion)
+   - The expanded panel shows ONLY the items belonging to this seller's store:
+     Item thumbnail image, title, quantity, unit price, line total
+   - Also shows: Buyer's shipping address, payment method, order date
+
+4. ORDER STATUS UPDATE:
+   - In the Actions column, render a shadcn/ui Select dropdown allowing the seller to 
+     advance the order status through the allowed flow:
+     "pending" → "confirmed" → "processing" → "shipped"
+   - Sellers cannot set status to "delivered" (that is a system/admin action) or go backwards
+   - On status change:
+     Use TanStack Query useMutation to update the order document's status and updatedAt fields in Firestore
+     Show a success toast notification on completion
+     Show an error toast if the update fails
+   - Validate that the new status is a valid forward progression before sending to Firestore
+
+5. REAL-TIME UPDATES:
+   - Subscribe to Firestore onSnapshot for the seller's orders query
+   - When a new order comes in or an existing order changes, the table updates automatically without manual refresh
+   - Use TanStack Query's queryClient.setQueryData or invalidateQueries to sync snapshot data into the cache
+   - Animate new rows appearing in the table with Framer Motion (fade-in + slide-down)
+
+6. PAGINATION & FILTERING:
+   - Load 20 orders per page using Firestore cursor-based pagination (orderBy createdAt desc, startAfter)
+   - Add filter tabs or dropdown at the top: "All", "Pending", "Confirmed", "Processing", "Shipped", "Delivered"
+   - Filtering changes the Firestore query (where status == selected filter)
+   - Show total order count for each filter tab as a badge number
+
+7. LOADING & EMPTY STATES:
+   - Loading: Skeleton table rows matching the column layout
+   - Empty: "No orders yet" message with an illustration and text like "When customers purchase your products, orders will appear here"
+PHASE 6B — BUYER ORDER HISTORY & ORDER DETAIL
+Implement the Buyer Order History system under src/features/orders/ for the buyer-facing side:
+
+1. BUYER ORDER HISTORY PAGE (/orders):
+   - Protected route (must be logged in, any role — buyer or seller can view their own purchase history)
+   - Add "My Orders" link in the user avatar dropdown menu in the Navbar
+
+2. ORDER LIST:
+   - Fetch all orders from Firestore where buyerId matches the current authenticated user's UID
+   - Use TanStack Query (useQuery) with Firestore query ordered by createdAt descending
+   - Display as a vertical list of Order Cards (not a table — this is buyer-facing, should feel more like a receipt list)
+
+3. ORDER CARD COMPONENT:
+   - Each card (shadcn/ui Card) displays:
+     Order ID (truncated) and full date
+     Status badge (same color-coding as seller side: pending=yellow, confirmed=blue, processing=orange, shipped=purple, delivered=green, cancelled=red)
+     Row of item thumbnail images (show first 4, then "+X more" if more than 4 items)
+     Total order amount (formatted as currency)
+   - Entire card is clickable, navigates to /orders/:orderId detail page
+   - Framer Motion: Cards animate in with stagger on page load (fade-up, 50ms stagger between cards)
+
+4. ORDER DETAIL PAGE (/orders/:orderId):
+   - Protected route: Only accessible if the order's buyerId matches the current user's UID
+   - If unauthorized, redirect to /orders with an error toast
+   - Layout:
+     Top section: Order ID, date placed, current status badge
+     Status Timeline/Stepper: A horizontal visual stepper showing all statuses 
+       (Pending → Confirmed → Processing → Shipped → Delivered)
+       The current status and all previous steps are highlighted/filled
+       Future steps are grayed out
+       Use Framer Motion to animate the progress indicator
+     Items section: Full list of all items in the order with image, title, quantity, unit price, line total
+       Each item's store name is shown and clickable (links to /store/:slug)
+     Shipping Address section: Full formatted address
+     Order Summary section: Subtotal, shipping cost, total
+     "Continue Shopping" button at the bottom linking to /
+
+5. REAL-TIME ORDER TRACKING ON DETAIL PAGE:
+   - Subscribe to Firestore onSnapshot for this specific order document
+   - When the seller updates the order status, the buyer sees the change in real-time:
+     Status badge updates
+     Timeline stepper animates to the new step (Framer Motion spring animation on the progress fill)
+     A subtle toast notification appears: "Your order status has been updated to [new status]!"
+
+6. PAGINATION:
+   - Load 10 orders at a time on the /orders page
+   - Implement "Load More" button at the bottom (not infinite scroll)
+   - Use TanStack Query useInfiniteQuery with Firestore startAfter cursor
+   - Show loading spinner on the Load More button while fetching
+
+7. LOADING & EMPTY STATES:
+   - Order list loading: Skeleton cards (3 placeholder cards with shimmer)
+   - Order detail loading: Skeleton layout matching the detail page structure
+   - Empty order history: Friendly illustration with message "You haven't placed any orders yet" and a "Start Shopping" button linking to /
+PHASE 6C — GLOBAL TOAST NOTIFICATION SYSTEM
+Implement a centralized, consistent toast notification system across the entire application:
+
+1. TOAST PROVIDER SETUP:
+   - Install and configure shadcn/ui Toast (Sonner) as the global notification system
+   - Add the Toast/Sonner provider component inside src/app/Providers.tsx so it's available app-wide
+   - Position toasts at the bottom-right on desktop, bottom-center on mobile
+   - Set default duration to 4 seconds for success, 6 seconds for errors
+   - Allow toasts to be manually dismissed by clicking
+
+2. TOAST UTILITY HOOK/HELPER:
+   - Create a utility in src/shared/hooks/useAppToast.ts (or src/shared/lib/toast.ts) that wraps Sonner's toast function with preset configurations:
+     showSuccess(message: string, description?: string): Green checkmark icon, 4s duration
+     showError(message: string, description?: string): Red X icon, 6s duration, includes "Try again" as description if none provided
+     showInfo(message: string, description?: string): Blue info icon, 4s duration
+     showWarning(message: string, description?: string): Yellow warning icon, 5s duration
+   - This ensures every toast across the app has consistent styling and behavior
+
+3. INTEGRATE TOASTS INTO ALL EXISTING FEATURES — go through every phase and ensure toast notifications are triggered for every user action:
+
+   AUTH (Phase 1):
+     - Login success: "Welcome back, [displayName]!"
+     - Login error: "Login failed. [Firebase error message translated to friendly text]"
+     - Register success: "Account created successfully! Welcome to Pakstore."
+     - Register error: "Registration failed. [friendly error]"
+     - Password reset email sent: "Password reset email sent. Check your inbox."
+     - Logout: "You've been logged out."
+
+   STORE MANAGEMENT (Phase 2):
+     - Store created: "Your store '[storeName]' is now live! 🎉"
+     - Store settings updated: "Store settings saved successfully."
+     - Store deactivated: "Your store has been deactivated."
+     - Store reactivated: "Your store is active again."
+
+   PRODUCT MANAGEMENT (Phase 3):
+     - Product created: "Product '[title]' has been listed."
+     - Product updated: "Product updated successfully."
+     - Product deleted: "Product has been removed."
+     - Product activated/deactivated: "Product is now [active/inactive]."
+     - Image upload success: "Image uploaded."
+     - Image upload error: "Image upload failed. Please try again."
+
+   CART (Phase 4):
+     - Item added to cart: "[Product title] added to cart." (with a "View Cart" action button on the toast)
+     - Item removed from cart: "Item removed from cart."
+     - Cart cleared: "Cart has been cleared."
+     - Quantity updated: No toast (too frequent, would be annoying)
+     - Stock validation error: "Only [X] items available in stock."
+
+   CHECKOUT & ORDERS (Phase 4):
+     - Order placed successfully: "Order placed successfully! 🎉" (with "View Order" action button)
+     - Order placement error: "Failed to place order. Please try again."
+     - Stock insufficient during checkout: "Some items are no longer available in the requested quantity. Please review your cart."
+
+   SELLER ORDER MANAGEMENT (Phase 6A):
+     - Order status updated: "Order [orderId] updated to [status]."
+     - Status update error: "Failed to update order status."
+
+   BUYER ORDER TRACKING (Phase 6B):
+     - Real-time status change: "Your order [orderId] has been updated to [status]!"
+
+   REVIEWS (Phase 5):
+     - Review submitted: "Your review has been posted. Thank you!"
+     - Review error: "Failed to submit review."
+
+4. TOAST ANIMATIONS:
+   - Use Sonner's built-in animations or enhance with Framer Motion
+   - Toasts should slide in from the right on desktop, slide up from bottom on mobile
+   - Toasts should fade out when auto-dismissed
+   - Multiple toasts should stack vertically with a small gap, max 3 visible at once (older ones auto-dismiss)
+
+5. ERROR TOAST INTELLIGENCE:
+   - Create a helper function translateFirebaseError(error: FirebaseError): string that converts common Firebase error codes to friendly messages:
+     "auth/user-not-found" → "No account found with this email."
+     "auth/wrong-password" → "Incorrect password. Please try again."
+     "auth/email-already-in-use" → "An account with this email already exists."
+     "auth/too-many-requests" → "Too many attempts. Please wait a moment and try again."
+     "permission-denied" → "You don't have permission to perform this action."
+     "unavailable" → "Service temporarily unavailable. Please try again later."
+     Default → "Something went wrong. Please try again."
+   - Use this helper in every catch block before showing the error toast
