@@ -5,6 +5,14 @@ import createMemoryStore from "memorystore";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+
+const SALT_ROUNDS = 12;
+
+function sanitizeUser(user: { password?: string; [key: string]: unknown }) {
+  const { password, ...safe } = user;
+  return safe;
+}
 
 const MemoryStore = createMemoryStore(session);
 
@@ -35,13 +43,12 @@ export async function registerRoutes(
       const data = api.auth.login.input.parse(req.body);
       const user = await storage.getUserByEmail(data.email);
       
-      // In a real app, use password hashing!
-      if (!user || user.password !== data.password) {
+      if (!user || !(await bcrypt.compare(data.password, user.password))) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
       req.session.userId = user.id;
-      res.status(200).json(user);
+      res.status(200).json(sanitizeUser(user));
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
@@ -60,15 +67,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Email already registered" });
       }
 
+      const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
       const user = await storage.createUser({
         email: data.email,
-        password: data.password, // In a real app, hash this!
+        password: hashedPassword,
         displayName: data.displayName,
         role: "buyer"
       });
       
       req.session.userId = user.id;
-      res.status(201).json(user);
+      res.status(201).json(sanitizeUser(user));
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
@@ -92,7 +100,7 @@ export async function registerRoutes(
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
-    res.status(200).json(user);
+    res.status(200).json(sanitizeUser(user));
   });
 
   app.post(api.auth.forgotPassword.path, async (req, res) => {

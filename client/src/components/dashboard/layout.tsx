@@ -2,7 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { ReactNode } from "react";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -20,3 +20,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
+export default DashboardLayout;
