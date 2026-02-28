@@ -20,6 +20,8 @@ import NewProductPage from "./pages/dashboard/products/new";
 import EditProductPage from "./pages/dashboard/products/edit";
 import ProductDetailPage from "./pages/product-detail";
 import StoreProfilePage from "./pages/store-profile";
+import BuyerOrderHistory from "./pages/orders";
+import OrderDetailPage from "./pages/orders/[id]";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { SellerRoute } from "./components/auth/SellerRoute";
 import { CartDrawer } from "./features/cart/components/cart-drawer";
@@ -36,6 +38,14 @@ function Router() {
       <Route path="/store/:slug" component={StoreProfilePage} />
       <Route path="/product/:id" component={ProductDetailPage} />
       
+      {/* Buyer Order Routes */}
+      <Route path="/orders">
+        <ProtectedRoute component={BuyerOrderHistory} />
+      </Route>
+      <Route path="/orders/:id">
+        {(params) => <ProtectedRoute component={() => <OrderDetailPage id={Number(params.id)} />} />}
+      </Route>
+
       {/* Dashboard Routes */}
       <Route path="/dashboard">
         <SellerRoute component={DashboardOverview} />

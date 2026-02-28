@@ -106,7 +106,7 @@ export function Navbar() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => setLocation("/orders")} className="cursor-pointer">
                     <PackageOpen className="mr-2 h-4 w-4" />
                     <span>My Orders</span>
                   </DropdownMenuItem>

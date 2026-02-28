@@ -278,6 +278,21 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // Buyer Order Routes
+  app.get("/api/orders", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const ordersList = await storage.getOrdersByUser(req.session.userId);
+    res.json(ordersList);
+  });
+
+  app.get("/api/orders/:id", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const order = await storage.getOrder(parseInt(req.params.id));
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.userId !== req.session.userId) return res.status(403).json({ message: "Unauthorized" });
+    res.json(order);
+  });
+
   // Review Routes
   app.get("/api/products/:id/reviews", async (req, res) => {
     const reviewsList = await storage.getReviewsByProduct(parseInt(req.params.id));
