@@ -47,10 +47,10 @@ export default function ProductDetailPage({ id }: { id: string }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8 bg-white p-6 rounded-xl shadow-sm">
+        <div className="grid md:grid-cols-2 gap-8 bg-card p-6 rounded-xl shadow-sm border">
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
