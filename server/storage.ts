@@ -24,6 +24,7 @@ export interface IStorage {
   createOrder(order: InsertOrder & { userId: number }): Promise<Order>;
   getOrdersByUser(userId: number): Promise<Order[]>;
   getOrdersByStore(storeId: number): Promise<Order[]>;
+  updateOrderStatus(id: number, status: string): Promise<Order>;
 
   createReview(review: InsertReview & { userId: number, userName: string }): Promise<Review>;
   getReviewsByProduct(productId: number): Promise<Review[]>;
@@ -113,6 +114,11 @@ export class DatabaseStorage implements IStorage {
 
   async getOrdersByStore(storeId: number): Promise<Order[]> {
     return await db.select().from(orders).where(eq(orders.storeId, storeId)).orderBy(desc(orders.createdAt));
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [order] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    return order;
   }
 
   async createReview(reviewData: InsertReview & { userId: number, userName: string }): Promise<Review> {

@@ -239,6 +239,45 @@ export async function registerRoutes(
     res.json(ordersList);
   });
 
+  app.get("/api/stores/:storeId/orders", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const storeId = parseInt(req.params.storeId);
+    const store = await storage.getStore(storeId);
+    if (!store || store.ownerId !== req.session.userId) {
+      return res.status(403).json({ message: "Unauthorized to view these orders" });
+    }
+    const ordersList = await storage.getOrdersByStore(storeId);
+    res.json(ordersList);
+  });
+
+  app.patch("/api/orders/:id/status", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const orderId = parseInt(req.params.id);
+    const { status } = req.body;
+    
+    // Simple progression check
+    const validStatusFlow: Record<string, string[]> = {
+      "pending": ["confirmed"],
+      "confirmed": ["processing"],
+      "processing": ["shipped"],
+    };
+
+    const order = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1).then(r => r[0]);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const store = await storage.getStore(order.storeId);
+    if (!store || store.ownerId !== req.session.userId) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (!validStatusFlow[order.status]?.includes(status)) {
+      return res.status(400).json({ message: "Invalid status progression" });
+    }
+
+    const updated = await storage.updateOrderStatus(orderId, status);
+    res.json(updated);
+  });
+
   // Review Routes
   app.get("/api/products/:id/reviews", async (req, res) => {
     const reviewsList = await storage.getReviewsByProduct(parseInt(req.params.id));

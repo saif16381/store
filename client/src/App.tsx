@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/forgot-password";
 import CartPage from "./pages/cart";
 import CheckoutPage from "./pages/checkout";
 import DashboardOverview from "./pages/dashboard/overview";
+import SellerOrdersPage from "./pages/dashboard/orders";
 import StoreSettingsPage from "./pages/dashboard/settings";
 import ProductListPage from "./pages/dashboard/products/list";
 import NewProductPage from "./pages/dashboard/products/new";
@@ -50,6 +51,9 @@ function Router() {
       </Route>
       <Route path="/dashboard/products/:id/edit">
         {(params) => <SellerRoute component={() => <EditProductPage id={Number(params.id)} />} />}
+      </Route>
+      <Route path="/dashboard/orders">
+        <SellerRoute component={SellerOrdersPage} />
       </Route>
       
       {/* Fallback to 404 */}
