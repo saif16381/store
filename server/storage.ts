@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, stores, products, type InsertUser, type User, type InsertStore, type Store, type InsertProduct, type Product } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { users, stores, products, orders, reviews, type InsertUser, type User, type InsertStore, type Store, type InsertProduct, type Product, type InsertOrder, type Order, type InsertReview, type Review } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -20,6 +20,13 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product>;
   deleteProduct(id: number): Promise<void>;
+
+  createOrder(order: InsertOrder & { userId: number }): Promise<Order>;
+  getOrdersByUser(userId: number): Promise<Order[]>;
+  getOrdersByStore(storeId: number): Promise<Order[]>;
+
+  createReview(review: InsertReview & { userId: number, userName: string }): Promise<Review>;
+  getReviewsByProduct(productId: number): Promise<Review[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -93,6 +100,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<void> {
     await db.delete(products).where(eq(products.id, id));
+  }
+
+  async createOrder(orderData: InsertOrder & { userId: number }): Promise<Order> {
+    const [order] = await db.insert(orders).values(orderData).returning();
+    return order;
+  }
+
+  async getOrdersByUser(userId: number): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByStore(storeId: number): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.storeId, storeId)).orderBy(desc(orders.createdAt));
+  }
+
+  async createReview(reviewData: InsertReview & { userId: number, userName: string }): Promise<Review> {
+    const [review] = await db.insert(reviews).values(reviewData).returning();
+    return review;
+  }
+
+  async getReviewsByProduct(productId: number): Promise<Review[]> {
+    return await db.select().from(reviews).where(eq(reviews.productId, productId)).orderBy(desc(reviews.createdAt));
   }
 }
 

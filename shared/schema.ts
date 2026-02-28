@@ -101,3 +101,41 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email()
 });
 export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
+
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  storeId: integer("store_id").notNull(),
+  items: text("items").notNull(), // JSON string of items
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"), // pending, paid, shipped, delivered, cancelled
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  shippingAddress: text("shipping_address").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull(),
+  userId: integer("user_id").notNull(),
+  userName: text("user_name").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;

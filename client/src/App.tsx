@@ -11,6 +11,7 @@ import Login from "./pages/login";
 import Register from "./pages/register";
 import ForgotPassword from "./pages/forgot-password";
 import CartPage from "./pages/cart";
+import CheckoutPage from "./pages/checkout";
 import DashboardOverview from "./pages/dashboard/overview";
 import StoreSettingsPage from "./pages/dashboard/settings";
 import ProductListPage from "./pages/dashboard/products/list";
@@ -24,38 +25,36 @@ import { CartDrawer } from "./features/cart/components/cart-drawer";
 
 function Router() {
   return (
-    <>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
-        <Route path="/forgot-password" component={ForgotPassword} />
-        <Route path="/cart" component={CartPage} />
-        <Route path="/store/:slug" component={StoreProfilePage} />
-        <Route path="/product/:id" component={ProductDetailPage} />
-        
-        {/* Dashboard Routes */}
-        <Route path="/dashboard">
-          <SellerRoute component={DashboardOverview} />
-        </Route>
-        <Route path="/dashboard/settings">
-          <SellerRoute component={StoreSettingsPage} />
-        </Route>
-        <Route path="/dashboard/products">
-          <SellerRoute component={ProductListPage} />
-        </Route>
-        <Route path="/dashboard/products/new">
-          <SellerRoute component={NewProductPage} />
-        </Route>
-        <Route path="/dashboard/products/:id/edit">
-          {(params) => <SellerRoute component={() => <EditProductPage id={Number(params.id)} />} />}
-        </Route>
-        
-        {/* Fallback to 404 */}
-        <Route component={NotFound} />
-      </Switch>
-      <CartDrawer />
-    </>
+    <Switch>
+      <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/cart" component={CartPage} />
+      <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/store/:slug" component={StoreProfilePage} />
+      <Route path="/product/:id" component={ProductDetailPage} />
+      
+      {/* Dashboard Routes */}
+      <Route path="/dashboard">
+        <SellerRoute component={DashboardOverview} />
+      </Route>
+      <Route path="/dashboard/settings">
+        <SellerRoute component={StoreSettingsPage} />
+      </Route>
+      <Route path="/dashboard/products">
+        <SellerRoute component={ProductListPage} />
+      </Route>
+      <Route path="/dashboard/products/new">
+        <SellerRoute component={NewProductPage} />
+      </Route>
+      <Route path="/dashboard/products/:id/edit">
+        {(params) => <SellerRoute component={() => <EditProductPage id={Number(params.id)} />} />}
+      </Route>
+      
+      {/* Fallback to 404 */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
@@ -64,6 +63,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Router />
+        <CartDrawer />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

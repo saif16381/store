@@ -218,5 +218,46 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // Order Routes
+  app.post("/api/orders", async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "Login to place orders" });
+    try {
+      const order = await storage.createOrder({
+        ...req.body,
+        userId: req.session.userId,
+      });
+      res.status(201).json(order);
+    } catch (error) {
+      console.error("Order creation error:", error);
+      res.status(500).json({ message: "Failed to create order" });
+    }
+  });
+
+  app.get("/api/orders", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const ordersList = await storage.getOrdersByUser(req.session.userId);
+    res.json(ordersList);
+  });
+
+  // Review Routes
+  app.get("/api/products/:id/reviews", async (req, res) => {
+    const reviewsList = await storage.getReviewsByProduct(parseInt(req.params.id));
+    res.json(reviewsList);
+  });
+
+  app.post("/api/products/:id/reviews", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const user = await storage.getUser(req.session.userId);
+    if (!user) return res.sendStatus(401);
+    
+    const review = await storage.createReview({
+      ...req.body,
+      productId: parseInt(req.params.id),
+      userId: user.id,
+      userName: user.displayName,
+    });
+    res.status(201).json(review);
+  });
+
   return httpServer;
 }

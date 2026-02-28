@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/stores/cartStore";
 import { useToast } from "@/hooks/use-toast";
+import { ProductReviews } from "@/features/reviews/components/product-reviews";
 
 export default function ProductDetailPage({ id }: { id: string }) {
   const { data: product, isLoading } = useProduct(parseInt(id));
@@ -149,6 +150,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
             </div>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
       </main>
     </div>
   );

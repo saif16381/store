@@ -10,6 +10,8 @@ export function CartDrawer() {
   const { items, isCartOpen, setCartOpen, removeItem, updateQuantity, getTotal, getItemCount } = useCartStore();
   const [, setLocation] = useLocation();
 
+  if (typeof window === 'undefined') return null;
+
   return (
     <Sheet open={isCartOpen} onOpenChange={setCartOpen}>
       <SheetContent className="w-full sm:max-w-md flex flex-col">
