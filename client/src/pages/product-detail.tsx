@@ -4,10 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Store, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useCartStore } from "@/stores/cartStore";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductDetailPage({ id }: { id: string }) {
   const { data: product, isLoading } = useProduct(parseInt(id));
   const [currentImage, setCurrentImage] = useState(0);
+  const addItem = useCartStore((state) => state.addItem);
+  const setCartOpen = useCartStore((state) => state.setCartOpen);
+  const { toast } = useToast();
 
   if (isLoading) {
     return (
@@ -30,6 +35,15 @@ export default function ProductDetailPage({ id }: { id: string }) {
       </div>
     );
   }
+
+  const handleAddToCart = () => {
+    addItem(product, 1);
+    toast({
+      title: "Added to cart",
+      description: `${product.title} has been added to your cart.`,
+    });
+    setCartOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -108,7 +122,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
                 <Badge variant={product.stock > 0 ? "secondary" : "destructive"}>
                   {product.stock > 0 ? "In Stock" : "Out of Stock"}
                 </Badge>
-                {product.stock > 0 && product.stock < 10 && (
+                {product.stock > 0 && product.stock < 5 && (
                   <span className="text-sm text-orange-600 font-medium">
                     Only {product.stock} left!
                   </span>
@@ -121,7 +135,11 @@ export default function ProductDetailPage({ id }: { id: string }) {
             </div>
 
             <div className="pt-6 space-y-4">
-              <Button className="w-full h-12 text-lg" disabled={product.stock === 0}>
+              <Button 
+                className="w-full h-12 text-lg" 
+                disabled={product.stock === 0}
+                onClick={handleAddToCart}
+              >
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Add to Cart
               </Button>
