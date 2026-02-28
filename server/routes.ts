@@ -107,5 +107,73 @@ export async function registerRoutes(
     }
   });
 
+  // Store Routes
+  app.post(api.stores.create.path, async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+      const input = api.stores.create.input.parse(req.body);
+      const store = await storage.createStore({
+        ...input,
+        ownerId: req.session.userId,
+      });
+      
+      // Update user role to seller and set storeId
+      await storage.updateUser(req.session.userId, {
+        role: "seller",
+        storeId: store.id,
+      });
+
+      res.status(201).json(store);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.get(api.stores.getMine.path, async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const store = await storage.getStoreByOwnerId(req.session.userId);
+    if (!store) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+    res.json(store);
+  });
+
+  app.get(api.stores.getBySlug.path, async (req, res) => {
+    const store = await storage.getStoreBySlug(req.params.slug);
+    if (!store) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+    res.json(store);
+  });
+
+  app.patch(api.stores.update.path, async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const store = await storage.getStore(Number(req.params.id));
+    if (!store || store.ownerId !== req.session.userId) {
+      return res.status(404).json({ message: "Store not found or unauthorized" });
+    }
+    try {
+      const updates = api.stores.update.input.parse(req.body);
+      const updated = await storage.updateStore(store.id, updates);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   return httpServer;
 }

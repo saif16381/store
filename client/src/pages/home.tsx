@@ -2,8 +2,12 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Heart, Sparkles, Star, TrendingUp } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
+import BecomeSellerForm from "@/features/stores/components/become-seller-form";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
-// Mock data for initial UI population
 const categories = [
   { id: 1, name: "Jewelry & Accessories", image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&h=500&fit=crop" },
   { id: 2, name: "Clothing & Shoes", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=500&h=500&fit=crop" },
@@ -21,12 +25,13 @@ const trending = [
 ];
 
 export default function Home() {
+  const { user } = useAuth();
+  const [showSellerForm, setShowSellerForm] = useState(false);
+
   return (
     <Layout>
-      {/* Hero Section */}
       <section className="relative bg-secondary/30 pt-16 pb-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          {/* subtle pattern background organic shapes */}
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent opacity-70"></div>
           <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-accent/40 via-transparent to-transparent opacity-70"></div>
         </div>
@@ -45,9 +50,32 @@ export default function Home() {
               Support independent creators and find extraordinary items for your home, wardrobe, and life.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="rounded-full px-8 h-14 text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-transform">
-                Shop Editor's Picks
-              </Button>
+              {user?.role === "buyer" && (
+                <Dialog open={showSellerForm} onOpenChange={setShowSellerForm}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" className="rounded-full px-8 h-14 text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-transform">
+                      Become a Seller
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-3xl">
+                    <BecomeSellerForm />
+                  </DialogContent>
+                </Dialog>
+              )}
+              {user?.role === "seller" && (
+                <Link href="/dashboard">
+                  <Button size="lg" className="rounded-full px-8 h-14 text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-transform">
+                    Seller Dashboard
+                  </Button>
+                </Link>
+              )}
+              {!user && (
+                <Link href="/login">
+                  <Button size="lg" className="rounded-full px-8 h-14 text-lg shadow-xl shadow-primary/20 hover:-translate-y-1 transition-transform">
+                    Start Shopping
+                  </Button>
+                </Link>
+              )}
               <Button variant="outline" size="lg" className="rounded-full px-8 h-14 text-lg bg-background hover:bg-secondary/50">
                 Explore Categories
               </Button>
@@ -56,7 +84,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories Row */}
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-10">
@@ -78,7 +105,6 @@ export default function Home() {
                 className="group flex flex-col items-center gap-3"
               >
                 <div className="w-full aspect-square rounded-full overflow-hidden border-4 border-transparent group-hover:border-primary/20 transition-all duration-300 shadow-md">
-                  {/* Category Image */}
                   <img 
                     src={category.image} 
                     alt={category.name} 
@@ -94,7 +120,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trending Section */}
       <section className="py-20 bg-secondary/10 border-t border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
