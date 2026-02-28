@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, type InsertUser, type User, type InsertStore, type Store } from "@shared/schema";
+import { users, stores, products, type InsertUser, type User, type InsertStore, type Store, type InsertProduct, type Product } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -13,6 +13,13 @@ export interface IStorage {
   getStoreBySlug(slug: string): Promise<Store | undefined>;
   createStore(store: InsertStore): Promise<Store>;
   updateStore(id: number, updates: Partial<Store>): Promise<Store>;
+
+  getProduct(id: number): Promise<Product | undefined>;
+  getProducts(): Promise<Product[]>;
+  getProductsByStore(storeId: number): Promise<Product[]>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -59,6 +66,33 @@ export class DatabaseStorage implements IStorage {
   async updateStore(id: number, updates: Partial<Store>): Promise<Store> {
     const [store] = await db.update(stores).set(updates).where(eq(stores.id, id)).returning();
     return store;
+  }
+
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
+  }
+
+  async getProducts(): Promise<Product[]> {
+    return await db.select().from(products);
+  }
+
+  async getProductsByStore(storeId: number): Promise<Product[]> {
+    return await db.select().from(products).where(eq(products.storeId, storeId));
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db.insert(products).values(insertProduct).returning();
+    return product;
+  }
+
+  async updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product> {
+    const [product] = await db.update(products).set(updates).where(eq(products.id, id)).returning();
+    return product;
+  }
+
+  async deleteProduct(id: number): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
   }
 }
 

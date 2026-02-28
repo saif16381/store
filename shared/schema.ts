@@ -31,6 +31,27 @@ export const stores = pgTable("stores", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").notNull(),
+  storeName: text("store_name").notNull(),
+  storeSlug: text("store_slug").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  compareAtPrice: decimal("compare_at_price", { precision: 10, scale: 2 }),
+  images: text("images").array().notNull(),
+  category: text("category").notNull(),
+  tags: text("tags").array(),
+  stock: integer("stock").notNull().default(0),
+  isActive: boolean("is_active").default(true),
+  rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
+  reviewCount: integer("review_count").default(0),
+  soldCount: integer("sold_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ 
   id: true, 
   createdAt: true, 
@@ -45,10 +66,21 @@ export const insertStoreSchema = createInsertSchema(stores).omit({
   totalSales: true
 });
 
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  rating: true,
+  reviewCount: true,
+  soldCount: true
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Store = typeof stores.$inferSelect;
 export type InsertStore = z.infer<typeof insertStoreSchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email(),

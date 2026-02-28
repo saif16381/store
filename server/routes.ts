@@ -175,5 +175,40 @@ export async function registerRoutes(
     }
   });
 
+  // Product Routes
+  app.get("/api/stores/:id/products", async (req, res) => {
+    const productsList = await storage.getProductsByStore(parseInt(req.params.id));
+    res.json(productsList);
+  });
+
+  app.get("/api/products", async (_req, res) => {
+    const productsList = await storage.getProducts();
+    res.json(productsList);
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    const product = await storage.getProduct(parseInt(req.params.id));
+    if (!product) return res.status(404).send("Product not found");
+    res.json(product);
+  });
+
+  app.post("/api/products", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const product = await storage.createProduct(req.body);
+    res.status(201).json(product);
+  });
+
+  app.patch("/api/products/:id", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    const product = await storage.updateProduct(parseInt(req.params.id), req.body);
+    res.json(product);
+  });
+
+  app.delete("/api/products/:id", async (req, res) => {
+    if (!req.session.userId) return res.sendStatus(401);
+    await storage.deleteProduct(parseInt(req.params.id));
+    res.sendStatus(204);
+  });
+
   return httpServer;
 }

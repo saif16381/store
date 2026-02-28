@@ -12,6 +12,10 @@ import Register from "./pages/register";
 import ForgotPassword from "./pages/forgot-password";
 import DashboardOverview from "./pages/dashboard/overview";
 import StoreSettingsPage from "./pages/dashboard/settings";
+import ProductListPage from "./pages/dashboard/products/list";
+import NewProductPage from "./pages/dashboard/products/new";
+import EditProductPage from "./pages/dashboard/products/edit";
+import ProductDetailPage from "./pages/product-detail";
 import StoreProfilePage from "./pages/store-profile";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { SellerRoute } from "./components/auth/SellerRoute";
@@ -24,6 +28,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/store/:slug" component={StoreProfilePage} />
+      <Route path="/product/:id" component={ProductDetailPage} />
       
       {/* Dashboard Routes */}
       <Route path="/dashboard">
@@ -31,6 +36,15 @@ function Router() {
       </Route>
       <Route path="/dashboard/settings">
         <SellerRoute component={StoreSettingsPage} />
+      </Route>
+      <Route path="/dashboard/products">
+        <SellerRoute component={ProductListPage} />
+      </Route>
+      <Route path="/dashboard/products/new">
+        <SellerRoute component={NewProductPage} />
+      </Route>
+      <Route path="/dashboard/products/:id/edit">
+        {(params) => <SellerRoute component={() => <EditProductPage id={Number(params.id)} />} />}
       </Route>
       
       {/* Fallback to 404 */}
