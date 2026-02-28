@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, decimal, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -32,25 +32,31 @@ export const stores = pgTable("stores", {
 });
 
 export const products = pgTable("products", {
-  id: serial("id").primaryKey(),
-  storeId: integer("store_id").notNull(),
-  storeName: text("store_name").notNull(),
-  storeSlug: text("store_slug").notNull(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  compareAtPrice: decimal("compare_at_price", { precision: 10, scale: 2 }),
-  images: text("images").array().notNull(),
-  category: text("category").notNull(),
-  tags: text("tags").array(),
-  stock: integer("stock").notNull().default(0),
-  isActive: boolean("is_active").default(true),
-  rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
-  reviewCount: integer("review_count").default(0),
-  soldCount: integer("sold_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+    id: serial("id").primaryKey(),
+    storeId: integer("store_id").notNull(),
+    storeName: text("store_name").notNull(),
+    storeSlug: text("store_slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    compareAtPrice: decimal("compare_at_price", { precision: 10, scale: 2 }),
+    images: text("images").array().notNull(),
+    category: text("category").notNull(),
+    tags: text("tags").array(),
+    stock: integer("stock").notNull().default(0),
+    isActive: boolean("is_active").default(true),
+    rating: decimal("rating", { precision: 2, scale: 1 }).default("0"),
+    reviewCount: integer("review_count").default(0),
+    soldCount: integer("sold_count").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  }, (table) => ({
+    categoryIdx: index("category_idx").on(table.category),
+    storeIdx: index("store_idx").on(table.storeId),
+    isActiveIdx: index("is_active_idx").on(table.isActive),
+    priceIdx: index("price_idx").on(table.price),
+    createdIdx: index("created_idx").on(table.createdAt),
+  }));
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
   id: true, 
@@ -103,17 +109,21 @@ export const forgotPasswordSchema = z.object({
 export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 
 export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  storeId: integer("store_id").notNull(),
-  items: text("items").notNull(), // JSON string of items
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // pending, paid, shipped, delivered, cancelled
-  customerName: text("customer_name").notNull(),
-  customerEmail: text("customer_email").notNull(),
-  shippingAddress: text("shipping_address").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    storeId: integer("store_id").notNull(),
+    items: text("items").notNull(), // JSON string of items
+    total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+    status: text("status").notNull().default("pending"), // pending, paid, shipped, delivered, cancelled
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email").notNull(),
+    shippingAddress: text("shipping_address").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  }, (table) => ({
+    userIdIdx: index("user_id_idx").on(table.userId),
+    storeIdIdx: index("order_store_id_idx").on(table.storeId),
+    createdIdx: index("order_created_idx").on(table.createdAt),
+  }));
 
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
