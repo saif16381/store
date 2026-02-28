@@ -1,7 +1,7 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
@@ -78,7 +78,7 @@ function App() {
       <TooltipProvider>
         <Router />
         <CartDrawer />
-        <Toaster />
+        <Toaster position="bottom-right" expand={false} richColors />
       </TooltipProvider>
     </QueryClientProvider>
   );

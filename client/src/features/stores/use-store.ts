@@ -2,12 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { Store, InsertStore } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAppToast } from "@/hooks/use-app-toast";
 import { useLocation } from "wouter";
 
 export function useStore() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const { showSuccess, showError } = useAppToast();
   const [, setLocation] = useLocation();
 
   const { data: myStore, isLoading: isMyStoreLoading } = useQuery<Store>({
@@ -23,11 +23,11 @@ export function useStore() {
     onSuccess: (data: Store) => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
       queryClient.setQueryData([api.stores.getMine.path], data);
-      toast({ title: "Store created!", description: "Welcome to your new shop." });
+      showSuccess(`Your store '${data.name}' is now live! 🎉`);
       setLocation("/dashboard");
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Creation failed", description: error.message });
+      showError("Creation failed", error.message);
     },
   });
 
@@ -39,7 +39,10 @@ export function useStore() {
     },
     onSuccess: (data: Store) => {
       queryClient.setQueryData([api.stores.getMine.path], data);
-      toast({ title: "Settings saved", description: "Your store has been updated." });
+      showSuccess("Store settings saved successfully.");
+    },
+    onError: (error: Error) => {
+      showError("Update failed", error.message);
     },
   });
 

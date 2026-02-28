@@ -2,13 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import type { LoginData, RegisterData, ForgotPasswordData, User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAppToast } from "@/hooks/use-app-toast";
 import { useLocation } from "wouter";
 import { useAuthUI } from "@/store/use-auth-ui";
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const { showSuccess, showError } = useAppToast();
   const [, setLocation] = useLocation();
   const { setAuthLoading, setAuthError } = useAuthUI();
 
@@ -34,19 +34,12 @@ export function useAuth() {
     },
     onSuccess: (data: User) => {
       queryClient.setQueryData([api.auth.me.path], data);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
+      showSuccess(`Welcome back, ${data.displayName}!`);
       setLocation("/");
     },
     onError: (error: Error) => {
       setAuthError(error.message);
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
-      });
+      showError("Login failed", error.message);
     },
     onSettled: () => setAuthLoading(false),
   });
@@ -61,19 +54,12 @@ export function useAuth() {
     },
     onSuccess: (data: User) => {
       queryClient.setQueryData([api.auth.me.path], data);
-      toast({
-        title: "Account created!",
-        description: "Welcome to ArtisanMarket.",
-      });
+      showSuccess("Account created successfully! Welcome to ArtisanMarket.");
       setLocation("/");
     },
     onError: (error: Error) => {
       setAuthError(error.message);
-      toast({
-        variant: "destructive",
-        title: "Registration failed",
-        description: error.message || "Could not create your account. Please try again.",
-      });
+      showError("Registration failed", error.message);
     },
     onSettled: () => setAuthLoading(false),
   });
@@ -86,18 +72,11 @@ export function useAuth() {
     onSuccess: () => {
       queryClient.setQueryData([api.auth.me.path], null);
       queryClient.clear();
-      toast({
-        title: "Logged out",
-        description: "You have been securely logged out.",
-      });
+      showSuccess("You've been logged out.");
       setLocation("/");
     },
     onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Logout failed",
-        description: "An error occurred while logging out.",
-      });
+      showError("Logout failed", "An error occurred while logging out.");
     },
   });
 
@@ -108,18 +87,11 @@ export function useAuth() {
       return res.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Reset link sent",
-        description: "Check your email for instructions to reset your password.",
-      });
+      showSuccess("Password reset email sent. Check your inbox.");
       setLocation("/login");
     },
     onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Request failed",
-        description: error.message || "Failed to send reset link.",
-      });
+      showError("Request failed", error.message || "Failed to send reset link.");
     },
   });
 

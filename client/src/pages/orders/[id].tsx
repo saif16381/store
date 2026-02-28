@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,8 @@ import { motion } from "framer-motion";
 import type { Order } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronLeft, Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAppToast } from "@/hooks/use-app-toast";
 
 const STATUS_STEPS = [
   { status: "pending", label: "Pending", icon: Clock },
@@ -21,9 +23,21 @@ const STATUS_STEPS = [
 
 export default function OrderDetailPage() {
   const { id } = useParams();
+  const { showInfo } = useAppToast();
+  const [prevStatus, setPrevStatus] = useState<string | null>(null);
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: [`/api/orders/${id}`],
+    refetchInterval: 5000, // Polling for real-time updates as we don't have Firestore here
   });
+
+  useEffect(() => {
+    if (order && prevStatus && order.status !== prevStatus) {
+      showInfo(`Your order status has been updated to ${order.status}!`);
+    }
+    if (order) {
+      setPrevStatus(order.status);
+    }
+  }, [order?.status]);
 
   if (isLoading) {
     return (

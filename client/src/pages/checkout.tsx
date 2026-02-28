@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useToast } from "@/hooks/use-toast";
+import { useAppToast } from "@/hooks/use-app-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const { items, getTotal, clearCart } = useCartStore();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const { showSuccess, showError } = useAppToast();
 
   const checkoutMutation = useMutation({
     mutationFn: async (data: CheckoutData) => {
@@ -50,9 +50,12 @@ export default function CheckoutPage() {
       return Promise.all(orderPromises);
     },
     onSuccess: () => {
-      toast({ title: "Order Placed!", description: "Thank you for your purchase." });
+      showSuccess("Order placed successfully! 🎉");
       clearCart();
       setLocation("/");
+    },
+    onError: (error: Error) => {
+      showError("Failed to place order", error.message);
     },
   });
 

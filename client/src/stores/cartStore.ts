@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Product } from '@shared/schema';
+import { toast } from 'sonner';
 
 export interface CartItem extends Pick<Product, 'id' | 'storeId' | 'title' | 'price' | 'stock'> {
   image: string;
@@ -36,6 +37,9 @@ export const useCartStore = create<CartState>()(
                 item.id === product.id ? { ...item, quantity: newQuantity } : item
               ),
             });
+            toast.success(`${product.title} added to cart.`);
+          } else {
+            toast.error(`Only ${product.stock} items available in stock.`);
           }
         } else {
           if (quantity <= product.stock) {
@@ -53,11 +57,16 @@ export const useCartStore = create<CartState>()(
                 },
               ],
             });
+            toast.success(`${product.title} added to cart.`);
+          } else {
+            toast.error(`Only ${product.stock} items available in stock.`);
           }
         }
       },
-      removeItem: (productId) =>
-        set({ items: get().items.filter((item) => item.id !== productId) }),
+      removeItem: (productId) => {
+        set({ items: get().items.filter((item) => item.id !== productId) });
+        toast.info("Item removed from cart.");
+      },
       updateQuantity: (productId, quantity) => {
         const items = get().items;
         const item = items.find((i) => i.id === productId);
@@ -67,9 +76,14 @@ export const useCartStore = create<CartState>()(
               i.id === productId ? { ...i, quantity } : i
             ),
           });
+        } else if (item && quantity > item.stock) {
+          toast.error(`Only ${item.stock} items available in stock.`);
         }
       },
-      clearCart: () => set({ items: [] }),
+      clearCart: () => {
+        set({ items: [] });
+        toast.info("Cart has been cleared.");
+      },
       setCartOpen: (open) => set({ isCartOpen: open }),
       getTotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),

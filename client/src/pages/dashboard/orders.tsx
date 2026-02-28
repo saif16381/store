@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useAppToast } from "@/hooks/use-app-toast";
 import { format } from "date-fns";
 import { api, buildUrl } from "@shared/routes";
 import { Order } from "@shared/schema";
@@ -36,7 +36,7 @@ const statusIcons: Record<string, any> = {
 
 export default function SellerOrdersPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { showSuccess, showError } = useAppToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("all");
 
@@ -68,10 +68,10 @@ export default function SellerOrdersPage() {
         [api.orders.getStoreOrders.path, user?.storeId],
         (old) => old?.map(o => o.id === data.id ? data : o)
       );
-      toast({ title: "Success", description: `Order status updated to ${data.status}` });
+      showSuccess(`Order #${data.id} status updated to ${data.status}`);
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      showError("Failed to update order status", err.message);
     },
   });
 

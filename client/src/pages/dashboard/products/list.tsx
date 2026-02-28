@@ -3,8 +3,10 @@ import { ProductList } from "@/features/products/components/product-list";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Plus } from "lucide-react";
+import { useAppToast } from "@/hooks/use-app-toast";
 
 export default function ProductListPage() {
+  const { showSuccess, showError } = useAppToast();
   return (
     <DashboardLayout>
       <div className="space-y-6">
