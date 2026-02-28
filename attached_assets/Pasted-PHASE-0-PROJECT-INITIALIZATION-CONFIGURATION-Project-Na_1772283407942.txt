@@ -1,0 +1,562 @@
+PHASE 0 — PROJECT INITIALIZATION & CONFIGURATION
+Project Name: Pakstore
+Description: A multi-vendor e-commerce marketplace (similar to Etsy) where users can register, create their own stores, list products, and buyers can browse, search, add to cart, and place orders. The entire platform is a serverless-first, thick-client Single Page Application.
+
+
+Initialize the project with the following exact tech stack:
+- React 18 with TypeScript (strict mode enabled)
+- Vite as the build tool (latest stable version)
+- Tailwind CSS for utility-first styling
+- shadcn/ui component library built on Radix UI primitives
+- Framer Motion for all animations and page transitions
+- wouter for client-side routing (do NOT use react-router)
+- Zustand for global client-side UI state (cart state, auth UI state, sidebar toggles, modals)
+- TanStack Query v5 for all server/async state management, caching, and Firestore data synchronization
+- Zod for all form validation and data schema validation
+- Firebase SDK (v9+ modular) for Authentication and Cloud Firestore database
+- Cloudinary for all image and media uploads and optimized delivery
+
+
+Project structure should follow a feature-based architecture:
+src/
+├── app/                    (App entry, providers, global layout)
+│   ├── App.tsx
+│   ├── Providers.tsx       (QueryClientProvider, AuthProvider wrappers)
+│   └── Layout.tsx
+├── features/
+│   ├── auth/               (login, register, password reset, auth hooks, auth store)
+│   ├── stores/             (store creation, store dashboard, store profile page)
+│   ├── products/           (product listing, product detail, product CRUD)
+│   ├── cart/               (cart drawer/page, cart store with Zustand)
+│   ├── orders/             (order placement, order history, order tracking)
+│   ├── search/             (search bar, search results, filters)
+│   └── home/               (landing page, featured products, categories)
+├── shared/
+│   ├── components/         (reusable UI: Navbar, Footer, ProductCard, StoreCard, Rating, etc.)
+│   ├── hooks/              (useAuth, useFirestore, useCloudinary, useDebounce, etc.)
+│   ├── lib/                (firebase.ts config, cloudinary.ts config, utils.ts)
+│   ├── schemas/            (Zod schemas: userSchema, productSchema, storeSchema, orderSchema)
+│   ├── types/              (TypeScript interfaces and types)
+│   └── constants/          (routes, categories, config values)
+├── stores/                 (Zustand store files: cartStore.ts, uiStore.ts)
+└── api/                    (Serverless functions directory for SEO, sitemaps, OG tags)
+
+
+Configure Vite with:
+- Path aliases (@ pointing to src/)
+- Environment variable support for VITE_FIREBASE_* and VITE_CLOUDINARY_* keys
+- Build optimization with code splitting per route
+
+
+Create a .env.example file with all required environment variables listed (no actual secrets):
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_CLOUDINARY_CLOUD_NAME=
+VITE_CLOUDINARY_UPLOAD_PRESET=
+
+
+
+PHASE 1 — FIREBASE SETUP, AUTHENTICATION & USER DATA MODEL
+Set up Firebase configuration in src/shared/lib/firebase.ts using the modular v9+ SDK. Initialize Firebase App, Auth, and Firestore exports.
+
+
+Implement the full authentication system under src/features/auth/:
+
+
+1. AUTH PROVIDER (context):
+   - Create an AuthProvider that wraps the app and listens to Firebase onAuthStateChanged
+   - Expose current user, loading state, and auth methods via a custom useAuth hook
+   - On auth state change, fetch or create the corresponding User document in Firestore
+
+
+2. USER DATA MODEL (Firestore collection: "users"):
+   - uid (string, matches Firebase Auth UID)
+   - email (string)
+   - displayName (string)
+   - photoURL (string, optional)
+   - role ("buyer" | "seller" | "admin")
+   - storeId (string | null — references their store document if they have one)
+   - createdAt (Firestore Timestamp)
+   - updatedAt (Firestore Timestamp)
+   
+   Define this as a Zod schema in src/shared/schemas/userSchema.ts and a TypeScript type in src/shared/types/
+
+
+3. AUTH PAGES & FORMS:
+   - /login page: Email/password login + Google OAuth sign-in button. Validate with Zod. Show loading and error states. Animate with Framer Motion fade-in.
+   - /register page: Name, email, password, confirm password. On success, create Firestore user doc with role "buyer". Redirect to home.
+   - /forgot-password page: Email input, sends Firebase password reset email.
+   - All forms use shadcn/ui Input, Button, Label, Card components.
+   - All forms have proper TypeScript typing, Zod validation with real-time error messages.
+
+
+4. PROTECTED ROUTES:
+   - Create a ProtectedRoute wrapper component that redirects unauthenticated users to /login
+   - Create a SellerRoute wrapper that additionally checks if user role is "seller" and has a storeId
+
+
+5. ZUSTAND AUTH UI STORE:
+   - Manage UI-only auth state: isLoginModalOpen, isAuthLoading, authError
+   - This is separate from the actual Firebase auth state
+
+
+
+PHASE 2 — STORE CREATION & MANAGEMENT (SELLER FEATURES)
+Implement the Store (vendor/shop) system under src/features/stores/:
+
+
+1. STORE DATA MODEL (Firestore collection: "stores"):
+   - id (auto-generated Firestore doc ID)
+   - ownerId (string, references user UID)
+   - name (string, unique, 3-50 characters)
+   - slug (string, URL-friendly version of name, unique)
+   - description (string, max 500 chars)
+   - logo (string, Cloudinary URL)
+   - banner (string, Cloudinary URL, optional)
+   - category (string, from predefined list: "Fashion", "Electronics", "Home & Garden", "Art & Crafts", "Food & Beverages", "Beauty", "Sports", "Books", "Other")
+   - rating (number, computed average)
+   - totalSales (number, default 0)
+   - isActive (boolean, default true)
+   - createdAt (Firestore Timestamp)
+   - updatedAt (Firestore Timestamp)
+
+
+   Define Zod schema and TypeScript type.
+
+
+2. "BECOME A SELLER" FLOW:
+   - Button visible to logged-in users with role "buyer" (in navbar dropdown or profile page)
+   - Clicking opens a multi-step form (use shadcn/ui Tabs or a step wizard with Framer Motion transitions):
+     Step 1: Store name, description, category selection
+     Step 2: Upload store logo via Cloudinary (use unsigned upload preset)
+     Step 3: Review & confirm
+   - On submit: Create store document in Firestore, update user document (role -> "seller", storeId -> new store ID)
+   - Use TanStack Query mutation with optimistic updates
+   - Redirect to /dashboard after success
+
+
+3. SELLER DASHBOARD (/dashboard):
+   - Protected by SellerRoute
+   - Layout: Sidebar navigation + main content area
+   - Sidebar links: Overview, Products, Orders, Store Settings
+   - Overview page shows: Total products count, total orders, total revenue, recent orders list
+   - All data fetched with TanStack Query hooks from Firestore
+   - Use shadcn/ui Card, Table, Badge components
+   - Animate dashboard cards entrance with Framer Motion stagger
+
+
+4. STORE SETTINGS PAGE (/dashboard/settings):
+   - Edit store name, description, category, logo, banner
+   - Toggle store active/inactive
+   - All changes saved to Firestore via TanStack Query mutation
+   - Show success/error toast notifications using shadcn/ui Toast
+
+
+5. PUBLIC STORE PROFILE PAGE (/store/:slug):
+   - Displays store banner, logo, name, description, rating, total sales
+   - Lists all active products from that store (grid layout)
+   - Responsive: 1 column mobile, 2 tablet, 3-4 desktop
+   - Fetched with TanStack Query using the store slug to find the store doc, then query products by storeId
+
+
+
+PHASE 3 — PRODUCT MANAGEMENT (CRUD + DISPLAY)
+Implement the Product system under src/features/products/:
+
+
+1. PRODUCT DATA MODEL (Firestore collection: "products"):
+   - id (auto-generated)
+   - storeId (string, references store)
+   - storeName (string, denormalized for display)
+   - storeSlug (string, denormalized for linking)
+   - title (string, 3-120 characters)
+   - description (string, rich text or plain, max 2000 chars)
+   - price (number, positive, up to 2 decimal places)
+   - compareAtPrice (number, optional — shows "was $X" for sales)
+   - images (array of strings, Cloudinary URLs, min 1, max 8)
+   - category (string, from predefined list matching store categories)
+   - tags (array of strings, max 10)
+   - stock (number, integer, >= 0)
+   - isActive (boolean, default true)
+   - rating (number, default 0)
+   - reviewCount (number, default 0)
+   - soldCount (number, default 0)
+   - createdAt (Firestore Timestamp)
+   - updatedAt (Firestore Timestamp)
+
+
+   Define Zod schema and TypeScript type.
+
+
+2. ADD PRODUCT (/dashboard/products/new):
+   - Multi-field form with shadcn/ui components:
+     Title, Description (textarea), Price, Compare-at Price, Category (select), Tags (multi-input), Stock quantity
+   - Multi-image upload to Cloudinary: Allow drag-and-drop or click-to-upload for up to 8 images. Show upload progress. Display preview thumbnails. Allow reordering and deletion of uploaded images.
+   - Validate everything with Zod before submission
+   - TanStack Query mutation to create Firestore document
+   - On success, redirect to /dashboard/products with success toast
+
+
+3. EDIT PRODUCT (/dashboard/products/:productId/edit):
+   - Same form as Add, pre-populated with existing data
+   - Fetch product with TanStack Query, show skeleton loading state
+   - Update via TanStack Query mutation with optimistic update
+
+
+4. PRODUCT LIST IN DASHBOARD (/dashboard/products):
+   - Table view using shadcn/ui Table
+   - Columns: Thumbnail, Title, Price, Stock, Status (Active/Draft badge), Actions (Edit, Delete, Toggle Active)
+   - Delete requires confirmation dialog (shadcn/ui AlertDialog)
+   - Pagination: Load 20 products per page using Firestore cursor-based pagination
+
+
+5. PUBLIC PRODUCT DETAIL PAGE (/product/:productId):
+   - Hero section: Image gallery (main image + thumbnails, click to switch, Framer Motion crossfade)
+   - Product info: Title, price (show compare-at price with strikethrough if exists), description, stock availability, store name (clickable link to /store/:slug)
+   - "Add to Cart" button (disabled if out of stock)
+   - Reviews section below (implement in Phase 5)
+   - Related products carousel (same category, exclude current)
+   - Fully responsive layout
+   - Use TanStack Query for fetching, with staleTime of 5 minutes
+
+
+6. REAL-TIME STOCK UPDATES:
+   - On the product detail page, subscribe to the Firestore document snapshot (onSnapshot)
+   - If stock changes while user is viewing, update the UI in real-time
+   - Show "Low stock — only X left!" warning when stock < 5
+   - Show "Out of Stock" badge and disable Add to Cart when stock = 0
+
+
+
+PHASE 4 — CART & CHECKOUT SYSTEM
+Implement the Cart and Order system:
+
+
+1. CART (Zustand store in src/stores/cartStore.ts):
+   - State shape:
+     items: Array of { productId, storeId, title, price, image, quantity, stock }
+     isCartOpen: boolean (for slide-over drawer)
+   - Actions:
+     addItem(product, quantity): Add or increment. Validate quantity <= stock.
+     removeItem(productId): Remove entirely
+     updateQuantity(productId, newQuantity): Update, validate against stock
+     clearCart(): Empty the cart
+     getTotal(): Computed total price
+     getItemCount(): Computed total quantity
+   - Persist cart to localStorage (Zustand persist middleware) so it survives page refresh
+   - Cart is NOT tied to authentication — works for guests too
+
+
+2. CART DRAWER (slide-over panel):
+   - Triggered by cart icon in Navbar (show badge with item count)
+   - Uses shadcn/ui Sheet component sliding in from the right
+   - Lists all cart items: image thumbnail, title, price, quantity adjuster (+/- buttons), remove button
+   - Shows subtotal at bottom
+   - "View Cart" button → /cart page
+   - "Checkout" button → /checkout page
+   - Animate entrance/exit with Framer Motion
+
+
+3. CART PAGE (/cart):
+   - Full page view of cart items in a table/list layout
+   - Group items by store (show store name header for each group)
+   - Quantity adjusters, remove buttons, per-item subtotal
+   - Order summary sidebar: Subtotal, estimated shipping (flat rate or free over threshold), total
+   - "Proceed to Checkout" button
+   - Empty cart state with illustration and "Continue Shopping" link
+
+
+4. CHECKOUT PAGE (/checkout):
+   - Protected route (must be logged in)
+   - If not logged in, redirect to /login with return URL
+   - Shipping address form: Full name, address line 1, address line 2, city, state/province, postal code, country, phone number. Validate with Zod.
+   - Order summary: List all items, quantities, prices, total
+   - Payment section: For this MVP, implement "Cash on Delivery" as the only payment method (a simple radio button selection). Add a placeholder note "Online payment coming soon."
+   - "Place Order" button:
+     On click, create an Order document in Firestore (see below), decrement product stock for each item using Firestore batch write/transaction, clear the cart, redirect to /orders/:orderId confirmation page with Framer Motion confetti or celebration animation.
+
+
+5. ORDER DATA MODEL (Firestore collection: "orders"):
+   - id (auto-generated)
+   - buyerId (string, user UID)
+   - items: Array of { productId, storeId, storeName, title, price, quantity, image }
+   - shippingAddress: { fullName, addressLine1, addressLine2, city, state, postalCode, country, phone }
+   - paymentMethod ("cod")
+   - status ("pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled")
+   - subtotal (number)
+   - shippingCost (number)
+   - total (number)
+   - createdAt (Firestore Timestamp)
+   - updatedAt (Firestore Timestamp)
+
+
+   Define Zod schema and TypeScript type.
+   
+   Firestore Security Consideration: Each order has a buyerId and items reference storeIds. Sellers should only see orders containing their store's items. Structure queries accordingly.
+
+
+6. ORDER CONFIRMATION PAGE (/orders/:orderId):
+   - Show order ID, status badge, items list, shipping address, total
+   - "Continue Shopping" button
+   - Framer Motion entrance animation
+
+
+7. REAL-TIME ORDER TRACKING:
+   - On order detail page, subscribe to Firestore onSnapshot for the order document
+   - Show a visual status timeline/stepper: Pending → Confirmed → Processing → Shipped → Delivered
+   - Animate status changes with Framer Motion
+
+
+
+PHASE 5 — SEARCH, BROWSE, HOME PAGE & REVIEWS
+1. HOME PAGE (/):
+   - Hero section: Full-width banner with headline "Discover Unique Products from Independent Sellers", search bar prominently centered, CTA buttons. Animate with Framer Motion (text fade-up, image parallax).
+   - Categories section: Grid of category cards with icons/images. Clicking navigates to /search?category=X.
+   - Featured Products section: Grid of 8 products (highest rated or most sold). Use ProductCard component.
+   - Featured Stores section: Horizontal scrollable row of StoreCard components.
+   - "How It Works" section: 3-step process (Browse → Purchase → Enjoy) with icons and Framer Motion stagger animation.
+   - Footer: Links to About, Contact, Terms, Privacy. Social media icon links. Newsletter email signup (UI only for MVP).
+
+
+2. PRODUCT CARD COMPONENT (shared):
+   - Image (first from images array, Cloudinary transformation for thumbnail size)
+   - Title (truncated to 2 lines)
+   - Price (show compare-at with strikethrough if applicable)
+   - Store name
+   - Rating stars + review count
+   - "Add to Cart" quick-add button on hover
+   - Framer Motion: scale on hover, fade-in on scroll (use intersection observer or Framer Motion whileInView)
+
+
+3. SEARCH & BROWSE (/search):
+   - Top: Search input bar with debounced input (300ms)
+   - Filters sidebar (collapsible on mobile):
+     Category (checkbox list)
+     Price range (min/max inputs or slider)
+     Rating (minimum stars)
+     Sort by: Relevance, Price Low-High, Price High-Low, Newest, Most Popular
+   - Results grid: ProductCard components, responsive grid
+   - Pagination or infinite scroll (TanStack Query with useInfiniteQuery and Firestore startAfter cursor)
+   - Loading state: Skeleton grid of ProductCard placeholders
+   - Empty state: "No products found" with illustration
+   - URL sync: Reflect all filters and search term in URL query params (using wouter + manual searchParams handling) so searches are shareable/bookmarkable
+
+
+   Note on search: Firestore does not support full-text search natively. For MVP, implement:
+   - Search by exact category match
+   - Search by title using Firestore >= and <= string range query (basic prefix search)
+   - Filter by price range, sort by price/createdAt
+   - Add a comment noting that for production, Algolia or Typesense integration would be recommended
+
+
+4. REVIEWS SYSTEM:
+   - Firestore subcollection: "products/{productId}/reviews"
+   - Review document:
+     id, userId, userName, userPhoto, rating (1-5), comment (string, max 500), createdAt
+   - On product detail page, show reviews list below product info
+   - Logged-in buyers who have purchased this product can leave a review (one review per user per product)
+   - Star rating input component (clickable stars)
+   - After review submission, recalculate product's average rating and reviewCount (use Firestore transaction)
+   - Display average rating and count on ProductCard and product detail page
+
+
+5. ALL STORES PAGE (/stores):
+   - Grid of StoreCard components showing all active stores
+   - StoreCard: Logo, name, category badge, rating, total sales
+   - Filter by category
+   - Search by store name
+
+
+
+PHASE 6 — SELLER ORDER MANAGEMENT & NOTIFICATIONS
+1. SELLER ORDERS PAGE (/dashboard/orders):
+   - Table listing all orders that contain items from the seller's store
+   - Query: Firestore query where items array contains storeId matching seller's store
+   - Columns: Order ID (truncated), Buyer name, Items (count), Total for seller's items, Status, Date, Actions
+   - Click on row expands to show order details specific to this seller's items
+   - Status update dropdown: Seller can change status from "pending" → "confirmed" → "processing" → "shipped"
+   - Status change updates Firestore with TanStack Query mutation
+   - Real-time updates via Firestore onSnapshot
+
+
+2. BUYER ORDER HISTORY (/orders):
+   - Protected route
+   - List of all orders placed by the current user
+   - Show order card: Order ID, date, status badge (color-coded), item thumbnails, total
+   - Click to expand or navigate to order detail page
+   - Use TanStack Query with Firestore query (buyerId == current user UID), ordered by createdAt desc
+
+
+3. TOAST NOTIFICATIONS:
+   - Use shadcn/ui Toast/Sonner for all user feedback:
+     Product added to cart
+     Order placed successfully
+     Order status updated
+     Store created
+     Product created/updated/deleted
+     Error states
+   - Animate toast entrance/exit with Framer Motion or shadcn/ui built-in animations
+
+
+
+PHASE 7 — UI POLISH, RESPONSIVE DESIGN, ANIMATIONS & SEO
+1. GLOBAL LAYOUT:
+   - Navbar: Logo (left), search bar (center, expandable on mobile), navigation links (Home, Stores, categories dropdown), cart icon with badge, user avatar dropdown (Profile, My Orders, Dashboard if seller, Logout). Sticky on scroll. Animate on scroll (shrink/shadow).
+   - Mobile: Hamburger menu with shadcn/ui Sheet (slide-from-left), bottom navigation bar for key actions
+   - Footer: Multi-column layout, responsive
+   - Page transitions: Framer Motion AnimatePresence wrapping route content, fade + slide transitions
+
+
+2. RESPONSIVE DESIGN:
+   - Every page must be fully responsive: mobile-first approach
+   - Breakpoints following Tailwind defaults (sm, md, lg, xl)
+   - Test: Product grid 1-col (mobile) → 2-col (sm) → 3-col (md) → 4-col (lg)
+   - Dashboard: Stack sidebar on mobile, drawer toggle
+   - Forms: Full-width on mobile, constrained max-width on desktop
+
+
+3. ANIMATIONS (Framer Motion throughout):
+   - Page enter/exit transitions
+   - Card hover effects (scale, shadow lift)
+   - Skeleton loading shimmer
+   - Button press feedback (scale down slightly)
+   - Cart drawer slide-in
+   - Dashboard stat cards stagger entrance
+   - Modal/dialog scale + fade
+   - Scroll-triggered animations for home page sections (whileInView)
+   - Smooth layout animations for filtering results (AnimatePresence + layoutId)
+
+
+4. DARK MODE:
+   - Implement dark mode toggle using Tailwind's dark class strategy
+   - Store preference in localStorage
+   - Add toggle button in Navbar (sun/moon icon)
+   - All shadcn/ui components already support dark mode
+   - Ensure all custom components have proper dark mode variants
+
+
+5. LOADING & ERROR STATES:
+   - Every data-fetching component must have:
+     Loading: Skeleton UI matching the content shape (not generic spinners)
+     Error: Friendly error message with retry button
+     Empty: Contextual empty state with illustration and action CTA
+   - Global error boundary wrapping the app
+
+
+6. SEO & META:
+   - In the api/ directory, create serverless functions for:
+     Dynamic meta tags / OG tags for product pages and store pages (for social sharing)
+     sitemap.xml generation listing all public product and store URLs
+     robots.txt
+   - On the client side, use react-helmet-async or a similar library to set page titles and meta descriptions on each route
+
+
+7. ACCESSIBILITY:
+   - All interactive elements must have proper aria labels
+   - Keyboard navigation support (shadcn/ui + Radix handle this largely)
+   - Focus management on modals and drawers
+   - Color contrast compliance
+   - Skip-to-content link
+
+
+
+PHASE 8 — FIRESTORE SECURITY RULES & FINAL CONFIGURATION
+Provide Firestore Security Rules (as a firestore.rules file or documentation) with these policies:
+
+
+1. USERS collection:
+   - Any authenticated user can read any user profile (public data)
+   - Users can only update their own document
+   - Users can create their own document (on registration)
+
+
+2. STORES collection:
+   - Anyone (even unauthenticated) can read active stores
+   - Only authenticated users can create a store (and only if they don't already have one)
+   - Only the store owner can update their store
+   - Stores cannot be deleted (only deactivated)
+
+
+3. PRODUCTS collection:
+   - Anyone can read active products
+   - Only the store owner can create products in their store (storeId must match)
+   - Only the store owner can update/delete their products
+   - Validate required fields in rules
+
+
+4. ORDERS collection:
+   - Only authenticated users can create orders (buyerId must match auth UID)
+   - Buyers can read their own orders (buyerId == auth UID)
+   - Sellers can read orders containing their storeId in items array
+   - Only sellers can update order status (limited field update)
+   - Orders cannot be deleted
+
+
+5. REVIEWS subcollection:
+   - Anyone can read reviews
+   - Only authenticated users can create (one per user per product)
+   - Users can only update/delete their own reviews
+
+
+Also provide Firestore indexes that will be needed:
+- products: (category ASC, createdAt DESC) for category browsing
+- products: (storeId ASC, createdAt DESC) for store product listing
+- products: (isActive ASC, category ASC, price ASC) for filtered search
+- orders: (buyerId ASC, createdAt DESC) for buyer order history
+
+
+Create a Cloudinary configuration note in the README explaining:
+- Create an unsigned upload preset named "pakstore_uploads"
+- Set allowed formats: jpg, png, webp, gif
+- Set max file size: 5MB
+- Enable auto-format and auto-quality transformations
+- Use Cloudinary URL transformations for responsive images (w_400 for thumbnails, w_800 for product detail)
+
+
+
+FINAL NOTES TO AGENT
+IMPORTANT IMPLEMENTATION NOTES:
+
+
+1. TypeScript Strict Mode: Every file must have proper TypeScript types. No "any" types. Use Zod's infer for form types.
+
+
+2. Error Handling: Every async operation must have try/catch with user-friendly error messages displayed via toast notifications.
+
+
+3. Performance:
+   - Lazy load route components with React.lazy + Suspense
+   - Use TanStack Query staleTime and gcTime appropriately (5 min stale, 30 min gc for products)
+   - Cloudinary image transformations for responsive sizes
+   - Memoize expensive computations with useMemo
+   - Use React.memo for list item components (ProductCard, StoreCard)
+
+
+4. Code Quality:
+   - Consistent naming: camelCase for variables/functions, PascalCase for components, UPPER_SNAKE for constants
+   - Each feature folder should be self-contained with its own components, hooks, and utilities
+   - Shared components should be truly reusable
+   - Custom hooks for all Firestore operations (useProducts, useStore, useOrders, etc.)
+   - All hooks should use TanStack Query (useQuery, useMutation, useInfiniteQuery)
+
+
+5. Testing consideration: Structure code so it's testable — separate business logic from UI, use dependency injection for Firebase services where possible.
+
+
+6. README.md: Generate a comprehensive README with:
+   - Project description
+   - Tech stack list
+   - Setup instructions (env vars, Firebase project setup, Cloudinary setup)
+   - Available scripts
+   - Project structure overview
+   - Deployment instructions for Replit
+
+
+Build each phase sequentially. After each phase, ensure the app compiles without errors and the implemented features are functional before moving to the next phase.
+
+
+
